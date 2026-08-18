@@ -1,0 +1,6 @@
+{
+  "name": "zaid&QR",
+  "description": "تطبيق لإنشاء وتحميل رموز QR كود الاحترافية بواجهة عصرية وتصميم انسيابي مذهل.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
