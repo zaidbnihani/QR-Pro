@@ -131,9 +131,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LogoScreen(onTimeout: () -> Unit) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         delay(2000) // Show for 2 seconds
         onTimeout()
+    }
+
+    val logoBitmap = remember(context) {
+        try {
+            android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.qr_icon_final)?.asImageBitmap()
+        } catch (e: Throwable) {
+            null
+        }
     }
 
     Box(
@@ -143,11 +152,35 @@ fun LogoScreen(onTimeout: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.qr_icon_final),
-                contentDescription = "App Logo",
-                modifier = Modifier.size(200.dp)
-            )
+            if (logoBitmap != null) {
+                Image(
+                    bitmap = logoBitmap,
+                    contentDescription = "App Logo",
+                    modifier = Modifier.size(180.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(
+                                    androidx.compose.ui.graphics.Color(0xFF00E5FF).copy(alpha = 0.25f),
+                                    androidx.compose.ui.graphics.Color.Transparent
+                                )
+                            ),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode2,
+                        contentDescription = "App Logo",
+                        tint = androidx.compose.ui.graphics.Color(0xFF00E5FF),
+                        modifier = Modifier.size(100.dp)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "zaid",
@@ -156,9 +189,9 @@ fun LogoScreen(onTimeout: () -> Unit) {
                     fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
                     brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                         colors = listOf(
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f),
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f),
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f)
                         )
                     )
                 )
@@ -175,7 +208,6 @@ enum class QrType(
 ) {
     LINK("رابط ويب", Icons.Default.Link, "عنوان URL يبدأ بـ https://"),
     TEXT("نص عام", Icons.Default.Description, "نص عادي، ملاحظات، أو معلومات عامة"),
-    MEDIA("صور وفيديوهات", Icons.Default.Collections, "مشاركة صورة أو مقطع فيديو من جهازك"),
     WHATSAPP("واتساب", Icons.AutoMirrored.Filled.Chat, "محادثة فورية مع رسالة تلقائية"),
     WIFI("واي فاي", Icons.Default.Wifi, "بطاقة رمز لشبكة لا سلكية"),
     LOCATION("الموقع الجغرافي", Icons.Default.LocationOn, "موقع على الخريطة أو إحداثيات GPS"),
@@ -210,50 +242,55 @@ fun QrProApp(modifier: Modifier = Modifier) {
     var wifiPassword by remember { mutableStateOf("") }
     var wifiSec by remember { mutableStateOf("WPA") }
 
-    // Location States
+    // Location States & Auto-Fill Permission Handling
     var locationName by remember { mutableStateOf("") }
     var locationLatitude by remember { mutableStateOf("") }
     var locationLongitude by remember { mutableStateOf("") }
 
-    // Media States (Images & Videos)
-    var selectedMediaUri by remember { mutableStateOf<Uri?>(null) }
-    var selectedMediaName by remember { mutableStateOf("") }
-    var selectedMediaType by remember { mutableStateOf("") }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (isGranted) {
+            fetchCurrentLocation(context) { lat, lng ->
+                locationLatitude = String.format(java.util.Locale.US, "%.6f", lat)
+                locationLongitude = String.format(java.util.Locale.US, "%.6f", lng)
+                if (locationName.isBlank()) {
+                    locationName = "موقعي الحالي"
+                }
+            }
+        } else {
+            Toast.makeText(context, "تم رفض إذن الوصول للموقع الجغرافي", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-    val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            selectedMediaUri = uri
-            selectedMediaName = ""
-            selectedMediaType = "ملف"
-            try {
-                val cursor = context.contentResolver.query(uri, null, null, null, null)
-                cursor?.use {
-                    if (it.moveToFirst()) {
-                        val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                        if (nameIndex != -1) {
-                            selectedMediaName = it.getString(nameIndex)
-                        }
-                    }
+    fun requestAndAutoFillLocation() {
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFine || hasCoarse) {
+            fetchCurrentLocation(context) { lat, lng ->
+                locationLatitude = String.format(java.util.Locale.US, "%.6f", lat)
+                locationLongitude = String.format(java.util.Locale.US, "%.6f", lng)
+                if (locationName.isBlank()) {
+                    locationName = "موقعي الحالي"
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-            if (selectedMediaName.isBlank()) {
-                selectedMediaName = uri.lastPathSegment ?: "ملف"
-            }
-            
-            try {
-                val mimeType = context.contentResolver.getType(uri) ?: ""
-                selectedMediaType = when {
-                    mimeType.startsWith("image/") -> "صورة"
-                    mimeType.startsWith("video/") -> "فيديو"
-                    else -> "ملف"
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    // Automatically trigger location request when Location type is selected
+    LaunchedEffect(selectedType) {
+        if (selectedType == QrType.LOCATION) {
+            requestAndAutoFillLocation()
         }
     }
 
@@ -285,7 +322,7 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 if (hasPermission) {
                     val uri = withContext(Dispatchers.IO) { saveQrToDevice(context, bmp) }
                     if (uri != null) {
-                        alertMessage = if (isAutoSave) "تم إنشاء الرمز وحفظه تلقائياً في الاستوديو!" else "تم حفظ الرمز بنجاح في الاستوديو!"
+                        alertMessage = "تم حفظ رمز QR في معرض الصور بنجاح!"
                         showSuccessAlert = true
                     } else {
                         Toast.makeText(context, "فشل حفظ الرمز تلقائياً!", Toast.LENGTH_SHORT).show()
@@ -296,7 +333,7 @@ fun QrProApp(modifier: Modifier = Modifier) {
             } else {
                 val uri = withContext(Dispatchers.IO) { saveQrToDevice(context, bmp) }
                 if (uri != null) {
-                    alertMessage = if (isAutoSave) "تم إنشاء الرمز وحفظه تلقائياً في المعرض!" else "تم حفظ الرمز بنجاح في المعرض!"
+                    alertMessage = "تم حفظ رمز QR في معرض الصور بنجاح!"
                     showSuccessAlert = true
                 } else {
                     Toast.makeText(context, "فشل حفظ الملف!", Toast.LENGTH_SHORT).show()
@@ -340,8 +377,7 @@ fun QrProApp(modifier: Modifier = Modifier) {
         whatsappPhone, whatsappMessage,
         emailAddress, emailSubject, emailBody,
         wifiSsid, wifiPassword, wifiSec,
-        locationName, locationLatitude, locationLongitude,
-        selectedMediaUri, selectedMediaName
+        locationName, locationLatitude, locationLongitude
     ) {
         when (selectedType) {
             QrType.LINK -> {
@@ -353,16 +389,6 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 }
             }
             QrType.TEXT -> textInput
-            QrType.MEDIA -> {
-                if (selectedMediaUri == null) ""
-                else {
-                    val cleanName = selectedMediaName
-                        .replace(" ", "_")
-                        .filter { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' }
-                        .ifEmpty { "file" }
-                    "https://qrpro.storage.link/dl/$cleanName?id=${System.currentTimeMillis() % 1000000}"
-                }
-            }
             QrType.WHATSAPP -> {
                 if (whatsappPhone.isBlank()) ""
                 else {
@@ -442,40 +468,25 @@ fun QrProApp(modifier: Modifier = Modifier) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.QrCode,
                     contentDescription = "QR Logo",
                     tint = Color(0xFF00E5FF),
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = "QR PRO",
-                    fontSize = 24.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
                     letterSpacing = 2.sp
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "للمحترفين",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color(0xFFA0AEC0)
-                )
             }
-            
-            Text(
-                text = "صانع الرموز السريع والذكي مع تخصيص الرموز والبيانات",
-                fontSize = 13.sp,
-                color = Color(0xFF718096),
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 24.dp)
-            )
 
             // Horizontal Selector Tab for Customizable Tokens "تخصيص الرموز"
             Text(
@@ -492,28 +503,32 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 20.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 reverseLayout = true // Right-to-Left alignment feel
             ) {
                 items(QrType.values()) { type ->
                     val isSelected = selectedType == type
-                    
-                    // Animated scale and border width
-                    val scale by animateFloatAsState(if (isSelected) 1.05f else 1f)
                     val tintColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF718096)
-                    val cardBg = if (isSelected) Color(0xFF1E2640) else Color(0xFF111422)
                     val borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF2D3748)
 
                     Box(
                         modifier = Modifier
                             .testTag("type_tab_${type.name.lowercase()}")
-                            .scale(scale)
-                            .glassMorphism(cornerRadius = 24.dp, baseAlpha = if (isSelected) 0.35f else 0.15f)
+                            .glassMorphism(cornerRadius = 24.dp, baseAlpha = if (isSelected) 0.45f else 0.15f)
+                            .border(
+                                width = if (isSelected) 1.5.dp else 0.dp,
+                                color = borderColor,
+                                shape = RoundedCornerShape(24.dp)
+                            )
                             .clickable {
                                 selectedType = type
                                 keyboardController?.hide()
+                                if (type == QrType.LOCATION) {
+                                    requestAndAutoFillLocation()
+                                }
                             }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -613,119 +628,6 @@ fun QrProApp(modifier: Modifier = Modifier) {
                                 ),
                                 placeholder = { Text("اكتب أي معلومات هنا وسيحولها التطبيق لرمز QR...", color = Color(0xFF4A5568)) }
                             )
-                        }
-                        QrType.MEDIA -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Button(
-                                    onClick = {
-                                        try {
-                                            mediaPickerLauncher.launch(arrayOf("image/*", "video/*"))
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
-                                            Toast.makeText(context, "حدث خطأ أثناء فتح معرض الملفات!", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .testTag("pick_media_button")
-                                        .glassMorphism(cornerRadius = 24.dp, baseAlpha = 0.2f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Transparent
-                                    ),
-                                    shape = RoundedCornerShape(24.dp)
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Collections,
-                                            contentDescription = null,
-                                            tint = Color(0xFF00E5FF),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = if (selectedMediaUri == null) "اختر صورة أو فيديو من الاستوديو" else "تغيير الملف المختار",
-                                            color = Color.White,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                AnimatedVisibility(
-                                    visible = selectedMediaUri != null,
-                                    enter = fadeIn() + expandVertically(),
-                                    exit = fadeOut() + shrinkVertically()
-                                ) {
-                                    selectedMediaUri?.let { uri ->
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 16.dp)
-                                                .glassMorphism(cornerRadius = 20.dp, baseAlpha = 0.15f),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = Color.Transparent
-                                            )
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(14.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = when (selectedMediaType) {
-                                                        "صورة" -> Icons.Default.Image
-                                                        "فيديو" -> Icons.Default.PlayArrow
-                                                        else -> Icons.Default.Description
-                                                    },
-                                                    contentDescription = null,
-                                                    tint = Color(0xFF00E5FF),
-                                                    modifier = Modifier.size(28.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = "الملف المختار ($selectedMediaType):",
-                                                        color = Color(0xFFA0AEC0),
-                                                        fontSize = 11.sp,
-                                                        textAlign = TextAlign.Start,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                    Text(
-                                                        text = selectedMediaName,
-                                                        color = Color.White,
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        maxLines = 1,
-                                                        textAlign = TextAlign.Start,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        selectedMediaUri = null
-                                                        selectedMediaName = ""
-                                                        selectedMediaType = ""
-                                                    }
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Close,
-                                                        contentDescription = "Clear file",
-                                                        tint = Color.LightGray.copy(alpha = 0.8f)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                         QrType.WHATSAPP -> {
                             OutlinedTextField(
@@ -1059,121 +961,7 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Generated QR Display Preview Card
-            AnimatedVisibility(
-                visible = generatedBitmap != null,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                generatedBitmap?.let { bmp ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp)
-                            .testTag("generated_qr_card")
-                            .glassMorphism(cornerRadius = 32.dp, baseAlpha = 0.35f),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                        shape = RoundedCornerShape(32.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "رمز QR الجاهز",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .size(220.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(Color.White)
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "رمز QR المولد",
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Text(
-                                text = lastValueGenerated,
-                                color = Color(0xFFA0AEC0),
-                                fontSize = 12.sp,
-                                maxLines = 2,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Button(
-                                    onClick = { onShareClick() },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                        .testTag("share_qr_button")
-                                        .glassMorphism(cornerRadius = 20.dp, baseAlpha = 0.2f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                    shape = RoundedCornerShape(20.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Share,
-                                            contentDescription = "مشاركة",
-                                            tint = Color(0xFF00E5FF),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("مشاركة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                Button(
-                                    onClick = { onDownloadClick() },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                        .testTag("save_qr_button")
-                                        .glassMorphism(cornerRadius = 20.dp, baseAlpha = 0.2f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                    shape = RoundedCornerShape(20.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = "حفظ في المعرض",
-                                            tint = Color(0xFF00E5FF),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("حفظ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Generated QR Display Preview Card removed to save immediately in background instead of showing a preview card
 
             Spacer(modifier = Modifier.height(28.dp))
         }
@@ -1240,15 +1028,15 @@ fun customTextFieldColors() = OutlinedTextFieldDefaults.colors(
 
 fun Modifier.glassMorphism(
     cornerRadius: androidx.compose.ui.unit.Dp = 24.dp,
-    baseAlpha: Float = 0.25f,
-    shineDuration: Int = 4000
+    baseAlpha: Float = 0.2f,
+    shineDuration: Int = 8000
 ): Modifier = composed {
     val transition = rememberInfiniteTransition(label = "glassShine")
     val shineOffset by transition.animateFloat(
         initialValue = -500f,
         targetValue = 2000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(shineDuration, easing = LinearEasing, delayMillis = 500),
+            animation = tween(shineDuration, easing = LinearEasing, delayMillis = 1500),
             repeatMode = RepeatMode.Restart
         ),
         label = "shine"
@@ -1256,7 +1044,7 @@ fun Modifier.glassMorphism(
 
     this
         .shadow(
-            elevation = 16.dp,
+            elevation = 8.dp,
             shape = RoundedCornerShape(cornerRadius),
             ambientColor = Color.Black.copy(alpha = 0.2f),
             spotColor = Color.Black.copy(alpha = 0.1f)
@@ -1265,7 +1053,7 @@ fun Modifier.glassMorphism(
         .background(
             Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = baseAlpha + 0.1f),
+                    Color.White.copy(alpha = baseAlpha + 0.03f),
                     Color.White.copy(alpha = baseAlpha)
                 )
             )
@@ -1274,7 +1062,7 @@ fun Modifier.glassMorphism(
             Brush.linearGradient(
                 colors = listOf(
                     Color.Transparent,
-                    Color.White.copy(alpha = 0.3f),
+                    Color.White.copy(alpha = 0.05f),
                     Color.Transparent
                 ),
                 start = Offset(shineOffset, shineOffset),
@@ -1285,10 +1073,10 @@ fun Modifier.glassMorphism(
             width = 1.dp,
             brush = Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.6f),
-                    Color.White.copy(alpha = 0.1f),
-                    Color.White.copy(alpha = 0.2f),
-                    Color.White.copy(alpha = 0.05f)
+                    Color.White.copy(alpha = 0.25f),
+                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.03f)
                 ),
                 start = Offset(0f, 0f),
                 end = Offset(1000f, 1000f)
@@ -1376,6 +1164,73 @@ fun AnimatedGlowBackground() {
 }
 
 
+
+// Location retrieval utility using LocationManager
+fun fetchCurrentLocation(context: Context, onLocationRetrieved: (Double, Double) -> Unit) {
+    try {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+            ?: return
+
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasFine && !hasCoarse) return
+
+        var bestLocation: android.location.Location? = null
+        val providers = listOf(
+            android.location.LocationManager.GPS_PROVIDER,
+            android.location.LocationManager.NETWORK_PROVIDER,
+            android.location.LocationManager.PASSIVE_PROVIDER
+        )
+
+        for (provider in providers) {
+            try {
+                if (locationManager.isProviderEnabled(provider)) {
+                    val loc = locationManager.getLastKnownLocation(provider)
+                    if (loc != null) {
+                        if (bestLocation == null || loc.accuracy < bestLocation.accuracy) {
+                            bestLocation = loc
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (bestLocation != null) {
+            onLocationRetrieved(bestLocation.latitude, bestLocation.longitude)
+        } else {
+            val activeProvider = providers.firstOrNull {
+                try { locationManager.isProviderEnabled(it) } catch (e: Exception) { false }
+            }
+            if (activeProvider != null) {
+                val listener = object : android.location.LocationListener {
+                    override fun onLocationChanged(loc: android.location.Location) {
+                        onLocationRetrieved(loc.latitude, loc.longitude)
+                        try {
+                            locationManager.removeUpdates(this)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+                locationManager.requestLocationUpdates(
+                    activeProvider,
+                    1000L,
+                    0f,
+                    listener,
+                    android.os.Looper.getMainLooper()
+                )
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
 
 // QR creation utility utilizing standard Zebra Crossing - ZXing writing matrix
 object QrGeneratorUtil {
@@ -1496,6 +1351,7 @@ fun VideoBackground() {
                 override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                     try {
                         mediaPlayer = MediaPlayer.create(ctx, R.raw.bg_video)?.apply {
+                            setOnErrorListener { _, _, _ -> true }
                             setSurface(Surface(surface))
                             isLooping = true
                             setVolume(0f, 0f)
