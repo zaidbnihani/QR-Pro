@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📱 zaid&QR
+#  zaid&QR
 
 ### مولّد رموز QR عربي بواجهة أنيقة (Glassmorphism) — أندرويد
 
