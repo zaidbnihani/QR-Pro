@@ -26,10 +26,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-          validate-wrappers: false
-
-      - name: Make Gradle Wrapper Executable
-        run: chmod +x gradlew || true
 
       - name: Prepare Keystore and Environment
         run: |
@@ -41,7 +37,7 @@ jobs:
           fi
 
       - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
