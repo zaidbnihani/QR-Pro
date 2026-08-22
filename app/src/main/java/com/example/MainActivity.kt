@@ -135,6 +135,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
+                // Auto update check from GitHub Releases
+                com.example.updater.AutoUpdateChecker(currentVersionName = com.example.BuildConfig.VERSION_NAME)
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent,
