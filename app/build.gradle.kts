@@ -15,7 +15,7 @@ android {
     minSdk = 24
     targetSdk = 36
     versionCode = 1
-    versionName = "1.0"
+    versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -97,6 +97,8 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.zxing.core)
+  implementation(libs.androidx.media3.exoplayer)
+  implementation(libs.androidx.media3.ui)
   implementation(libs.logging.interceptor)
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)

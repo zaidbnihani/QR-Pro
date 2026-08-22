@@ -14,6 +14,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.delay
 import android.content.pm.PackageManager
@@ -41,6 +42,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -57,6 +59,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -91,10 +98,35 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import com.example.ui.theme.MyApplicationTheme
 import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import android.graphics.BitmapFactory
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Typeface
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+
+// Center Logo options for QR code customization
+enum class CenterLogoType(
+    val title: String,
+    val icon: ImageVector?,
+    val badgeColor: Color,
+    val isCustom: Boolean = false
+) {
+    NONE("بدون شعار", Icons.Default.Block, Color(0xFF718096)),
+    CUSTOM("شعار خاص", Icons.Default.AddPhotoAlternate, Color(0xFFE040FB), isCustom = true),
+    WHATSAPP("واتساب", Icons.AutoMirrored.Filled.Chat, Color(0xFF25D366)),
+    LINK("رابط", Icons.Default.Link, Color(0xFF007AFF)),
+    LOCATION("موقع", Icons.Default.LocationOn, Color(0xFFFF3B30)),
+    WIFI("واي فاي", Icons.Default.Wifi, Color(0xFF5856D6)),
+    PHONE("اتصال", Icons.Default.Phone, Color(0xFF34C759)),
+    EMAIL("إيميل", Icons.Default.Email, Color(0xFFFF9500)),
+    STAR("نجمة", Icons.Default.Star, Color(0xFFFFCC00))
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,90 +144,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
-                var showSplash by remember { mutableStateOf(true) }
-
-                if (showSplash) {
-                    LogoScreen(onTimeout = { showSplash = false })
-                } else {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-                    ) { innerPadding ->
-                        QrProApp(modifier = Modifier.padding(innerPadding))
-                    }
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent,
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                ) { innerPadding ->
+                    QrProApp(modifier = Modifier.padding(innerPadding))
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun LogoScreen(onTimeout: () -> Unit) {
-    val context = LocalContext.current
-    LaunchedEffect(Unit) {
-        delay(2000) // Show for 2 seconds
-        onTimeout()
-    }
-
-    val logoBitmap = remember(context) {
-        try {
-            android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.qr_icon_final)?.asImageBitmap()
-        } catch (e: Throwable) {
-            null
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color(0xFF171E3A)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (logoBitmap != null) {
-                Image(
-                    bitmap = logoBitmap,
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(180.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                                colors = listOf(
-                                    androidx.compose.ui.graphics.Color(0xFF00E5FF).copy(alpha = 0.25f),
-                                    androidx.compose.ui.graphics.Color.Transparent
-                                )
-                            ),
-                            shape = androidx.compose.foundation.shape.CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCode2,
-                        contentDescription = "App Logo",
-                        tint = androidx.compose.ui.graphics.Color(0xFF00E5FF),
-                        modifier = Modifier.size(100.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "zaid",
-                style = androidx.compose.ui.text.TextStyle(
-                    fontSize = 40.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f),
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f),
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.95f)
-                        )
-                    )
-                )
-            )
         }
     }
 }
@@ -297,6 +253,29 @@ fun QrProApp(modifier: Modifier = Modifier) {
     // Result QR Code state
     var generatedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var lastValueGenerated by remember { mutableStateOf("") }
+
+    // Center Logo state (شعار في منتصف رمز QR)
+    var isCenterLogoExpanded by remember { mutableStateOf(false) }
+    var selectedLogoType by remember { mutableStateOf(CenterLogoType.NONE) }
+    var customLogoUri by remember { mutableStateOf<Uri?>(null) }
+    var customLogoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    val customLogoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            customLogoUri = uri
+            selectedLogoType = CenterLogoType.CUSTOM
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    customLogoBitmap = BitmapFactory.decodeStream(stream)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "تعذر قراءة الصورة المحددة", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Alert Notification Banner states
     var showSuccessAlert by remember { mutableStateOf(false) }
@@ -449,18 +428,15 @@ fun QrProApp(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
     ) {
-        // Video background
-        VideoBackground()
-
-        // Super-optimized smooth visual glow background (no stellar lines or laggy elements)
-        AnimatedGlowBackground()
+        // Custom background image
+        AppBackground()
 
         // Content layout
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Elegant App Header
@@ -470,6 +446,7 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
                     .padding(bottom = 20.dp)
             ) {
                 Icon(
@@ -494,68 +471,110 @@ fun QrProApp(modifier: Modifier = Modifier) {
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
+                textAlign = TextAlign.End,
                 modifier = Modifier
-                    .align(Alignment.End)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
                     .padding(bottom = 10.dp)
             )
 
-            LazyRow(
+            // Horizontal Selector Tab for Customizable Tokens "تخصيص الرموز" with soft edge transparency
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 20.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                reverseLayout = true // Right-to-Left alignment feel
+                    .padding(bottom = 20.dp)
             ) {
-                items(QrType.values()) { type ->
-                    val isSelected = selectedType == type
-                    val tintColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF718096)
-                    val borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF2D3748)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    reverseLayout = true // Right-to-Left alignment feel
+                ) {
+                    items(QrType.values()) { type ->
+                        val isSelected = selectedType == type
+                        val tintColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF718096)
+                        val borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF2D3748)
 
-                    Box(
-                        modifier = Modifier
-                            .testTag("type_tab_${type.name.lowercase()}")
-                            .glassMorphism(cornerRadius = 24.dp, baseAlpha = if (isSelected) 0.45f else 0.15f)
-                            .border(
-                                width = if (isSelected) 1.5.dp else 0.dp,
-                                color = borderColor,
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .clickable {
-                                selectedType = type
-                                keyboardController?.hide()
-                                if (type == QrType.LOCATION) {
-                                    requestAndAutoFillLocation()
+                        Box(
+                            modifier = Modifier
+                                .testTag("type_tab_${type.name.lowercase()}")
+                                .glassMorphism(cornerRadius = 24.dp, baseAlpha = if (isSelected) 0.45f else 0.15f)
+                                .border(
+                                    width = if (isSelected) 1.5.dp else 0.dp,
+                                    color = borderColor,
+                                    shape = RoundedCornerShape(24.dp)
+                                )
+                                .clickable {
+                                    selectedType = type
+                                    keyboardController?.hide()
+                                    if (type == QrType.LOCATION) {
+                                        requestAndAutoFillLocation()
+                                    }
                                 }
-                            }
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(horizontal = 18.dp, vertical = 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = type.titleAr,
-                                color = if (isSelected) Color.White else Color(0xFFA0AEC0),
-                                fontSize = 14.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                            Icon(
-                                imageVector = type.icon,
-                                contentDescription = type.titleAr,
-                                tint = tintColor,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = type.titleAr,
+                                    color = if (isSelected) Color.White else Color(0xFFA0AEC0),
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                                Icon(
+                                    imageVector = type.icon,
+                                    contentDescription = type.titleAr,
+                                    tint = tintColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
+
+                // Left edge smooth transparent fade
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .width(32.dp)
+                        .matchParentSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xE607080C),
+                                    Color(0x8007080C),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                // Right edge smooth transparent fade
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(32.dp)
+                        .matchParentSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0x8007080C),
+                                    Color(0xE607080C)
+                                )
+                            )
+                        )
+                )
             }
 
             // Input Translucent Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
                     .glassMorphism(cornerRadius = 32.dp, baseAlpha = 0.25f),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.Transparent
@@ -899,6 +918,206 @@ fun QrProApp(modifier: Modifier = Modifier) {
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Center Logo Selection Row (مش مربع - خيار شعار بالمنتصف بنص واضح وجنبه دائرة صغيرة مع علامة صح)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    isCenterLogoExpanded = !isCenterLogoExpanded
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
+                                .testTag("toggle_center_logo_section")
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "شعار في منتصف الرمز",
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isCenterLogoExpanded) {
+                                        if (selectedLogoType == CenterLogoType.CUSTOM && customLogoBitmap != null) "مُفعّل: شعار خاص مخصص"
+                                        else if (selectedLogoType != CenterLogoType.NONE) "مُفعّل: ${selectedLogoType.title}"
+                                        else "اختر شعاراً أو صورة لوضعها بالوسط"
+                                    } else {
+                                        "إضافة لوجو أو أيقونة في مركز الكود"
+                                    },
+                                    color = if (isCenterLogoExpanded) Color(0xFF00E5FF) else Color(0xFFA0AEC0),
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Small circle with checkmark (دائرة صغيرة وعليها صح عند الضغط عليها)
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isCenterLogoExpanded) Color(0xFF00E5FF)
+                                        else Color.White.copy(alpha = 0.12f)
+                                    )
+                                    .border(
+                                        width = if (isCenterLogoExpanded) 2.dp else 1.5.dp,
+                                        color = if (isCenterLogoExpanded) Color(0xFF00E5FF) else Color(0xFF718096),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isCenterLogoExpanded) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "مفعّل",
+                                        tint = Color(0xFF07080C),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Expanded Logo Options
+                        AnimatedVisibility(
+                            visible = isCenterLogoExpanded,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp, bottom = 4.dp)
+                            ) {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items(CenterLogoType.values()) { logoType ->
+                                        val isSelected = selectedLogoType == logoType
+                                        val borderBrush = if (isSelected) {
+                                            Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF7F00FF)))
+                                        } else {
+                                            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.06f)))
+                                        }
+
+                                        Surface(
+                                            onClick = {
+                                                if (logoType.isCustom) {
+                                                    try {
+                                                        customLogoPickerLauncher.launch("image/*")
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                        Toast.makeText(context, "تعذر فتح معرض الصور", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    selectedLogoType = logoType
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.40f),
+                                            border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderBrush),
+                                            modifier = Modifier.testTag("logo_chip_${logoType.name}")
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+                                            ) {
+                                                if (logoType.isCustom && customLogoBitmap != null) {
+                                                    Image(
+                                                        bitmap = customLogoBitmap!!.asImageBitmap(),
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .size(18.dp)
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                    )
+                                                } else if (logoType.icon != null) {
+                                                    Icon(
+                                                        imageVector = logoType.icon,
+                                                        contentDescription = null,
+                                                        tint = if (isSelected) Color(0xFF00E5FF) else logoType.badgeColor,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (logoType.isCustom && customLogoBitmap != null) "شعارك" else logoType.title,
+                                                    color = if (isSelected) Color.White else Color(0xFFCBD5E0),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (selectedLogoType == CenterLogoType.CUSTOM && customLogoBitmap != null) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp)
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                try {
+                                                    customLogoPickerLauncher.launch("image/*")
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = null,
+                                                tint = Color(0xFF00E5FF),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "تغيير الصورة",
+                                                color = Color(0xFF00E5FF),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+
+                                        TextButton(
+                                            onClick = {
+                                                selectedLogoType = CenterLogoType.NONE
+                                                customLogoBitmap = null
+                                                customLogoUri = null
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFF5252),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "إلغاء الشعار",
+                                                color = Color(0xFFFF5252),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Conversion trigger Button (With robust instant auto-saving)
@@ -907,7 +1126,20 @@ fun QrProApp(modifier: Modifier = Modifier) {
                             if (structuredContent.isNotBlank()) {
                                 coroutineScope.launch {
                                     val bitmap = withContext(Dispatchers.Default) {
-                                        QrGeneratorUtil.generateQrCode(structuredContent, 512)
+                                        val activeLogoType = if (isCenterLogoExpanded) selectedLogoType else CenterLogoType.NONE
+                                        val logoToEmbed: Bitmap? = if (activeLogoType == CenterLogoType.CUSTOM) {
+                                            customLogoBitmap
+                                        } else if (activeLogoType != CenterLogoType.NONE) {
+                                            renderPresetLogoBitmap(activeLogoType, 160)
+                                        } else {
+                                            null
+                                        }
+                                        QrGeneratorUtil.generateQrCode(
+                                            text = structuredContent,
+                                            size = 600,
+                                            centerLogoBitmap = logoToEmbed,
+                                            centerLogoType = activeLogoType
+                                        )
                                     }
                                     if (bitmap != null) {
                                         generatedBitmap = bitmap
@@ -1085,82 +1317,22 @@ fun Modifier.glassMorphism(
         )
 }
 
-// Super-optimized smooth visual glow background (وموض ألوان ناعمة بدون خطوط أو أشكال هندسية بطيئة)
+// Static clean contrast overlay for video background (0% CPU/GPU overhead)
 @Composable
-fun AnimatedGlowBackground() {
-    val infiniteTransition = rememberInfiniteTransition(label = "glowBgAnimation")
-
-    val float1 by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.45f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alphaPulse1"
+fun VideoOverlayBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0x80000000),
+                        Color(0xA006080E),
+                        Color(0xC5000000)
+                    )
+                )
+            )
     )
-
-    val float2 by infiniteTransition.animateFloat(
-        initialValue = 0.40f,
-        targetValue = 0.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alphaPulse2"
-    )
-
-    val movementShift1 by infiniteTransition.animateFloat(
-        initialValue = -50f,
-        targetValue = 50f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(9000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "movementShift1"
-    )
-
-    val movementShift2 by infiniteTransition.animateFloat(
-        initialValue = 60f,
-        targetValue = -60f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(11000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "movementShift2"
-    )
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
-
-        if (width <= 0f || height <= 0f) return@Canvas
-
-        // Semi-transparent overlay to make text readable over the video
-        drawRect(color = Color(0x33000000)) // Lightened for better glass visibility
-
-        // First moving, pulsating neon cyan orb center-left-top
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF00E5FF).copy(alpha = float1.coerceIn(0f, 1f)), Color.Transparent),
-                center = Offset(width * 0.18f + movementShift1, height * 0.22f + movementShift2),
-                radius = (width * 1.1f).coerceAtLeast(1f)
-            ),
-            center = Offset(width * 0.18f + movementShift1, height * 0.22f + movementShift2),
-            radius = (width * 1.1f).coerceAtLeast(1f)
-        )
-
-        // Second moving, pulsating deep royalty purple orb center-right-bottom
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF7F00FF).copy(alpha = float2.coerceIn(0f, 1f)), Color.Transparent),
-                center = Offset(width * 0.82f + movementShift2, height * 0.72f - movementShift1),
-                radius = (width * 1.2f).coerceAtLeast(1f)
-            ),
-            center = Offset(width * 0.82f + movementShift2, height * 0.72f - movementShift1),
-            radius = (width * 1.2f).coerceAtLeast(1f)
-        )
-    }
 }
 
 
@@ -1232,13 +1404,106 @@ fun fetchCurrentLocation(context: Context, onLocationRetrieved: (Double, Double)
     }
 }
 
+// Render clean, high-resolution badge bitmaps for preset center logos
+fun renderPresetLogoBitmap(logoType: CenterLogoType, size: Int = 160): Bitmap {
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    val center = size / 2f
+    val radius = size * 0.44f
+
+    when (logoType) {
+        CenterLogoType.WHATSAPP -> {
+            paint.color = android.graphics.Color.parseColor("#25D366")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.46f
+            paint.textAlign = Paint.Align.CENTER
+            paint.typeface = Typeface.DEFAULT_BOLD
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("✆", center, yPos, paint)
+        }
+        CenterLogoType.LOCATION -> {
+            paint.color = android.graphics.Color.parseColor("#FF3B30")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.48f
+            paint.textAlign = Paint.Align.CENTER
+            paint.typeface = Typeface.DEFAULT_BOLD
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("📍", center, yPos, paint)
+        }
+        CenterLogoType.LINK -> {
+            paint.color = android.graphics.Color.parseColor("#007AFF")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.46f
+            paint.textAlign = Paint.Align.CENTER
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("🔗", center, yPos, paint)
+        }
+        CenterLogoType.WIFI -> {
+            paint.color = android.graphics.Color.parseColor("#5856D6")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.46f
+            paint.textAlign = Paint.Align.CENTER
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("📶", center, yPos, paint)
+        }
+        CenterLogoType.PHONE -> {
+            paint.color = android.graphics.Color.parseColor("#34C759")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.46f
+            paint.textAlign = Paint.Align.CENTER
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("📞", center, yPos, paint)
+        }
+        CenterLogoType.EMAIL -> {
+            paint.color = android.graphics.Color.parseColor("#FF9500")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.46f
+            paint.textAlign = Paint.Align.CENTER
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("✉", center, yPos, paint)
+        }
+        CenterLogoType.STAR -> {
+            paint.color = android.graphics.Color.parseColor("#FFCC00")
+            canvas.drawCircle(center, center, radius, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = size * 0.50f
+            paint.textAlign = Paint.Align.CENTER
+            val yPos = (center - (paint.descent() + paint.ascent()) / 2)
+            canvas.drawText("★", center, yPos, paint)
+        }
+        else -> {}
+    }
+    return bitmap
+}
+
 // QR creation utility utilizing standard Zebra Crossing - ZXing writing matrix
 object QrGeneratorUtil {
-    fun generateQrCode(text: String, size: Int = 512): Bitmap? {
+    fun generateQrCode(
+        text: String,
+        size: Int = 600,
+        centerLogoBitmap: Bitmap? = null,
+        centerLogoType: CenterLogoType = CenterLogoType.NONE
+    ): Bitmap? {
         if (text.isBlank()) return null
         return try {
+            val hints = mutableMapOf<EncodeHintType, Any>()
+            hints[EncodeHintType.CHARACTER_SET] = "UTF-8"
+            hints[EncodeHintType.MARGIN] = 1
+            if (centerLogoType != CenterLogoType.NONE || centerLogoBitmap != null) {
+                hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.H
+            } else {
+                hints[EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M
+            }
+
             val writer = QRCodeWriter()
-            val bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, size, size)
+            val bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, size, size, hints)
             val width = bitMatrix.width
             val height = bitMatrix.height
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -1250,6 +1515,55 @@ object QrGeneratorUtil {
                     )
                 }
             }
+
+            // Overlay Center Logo badge if selected
+            if (centerLogoType != CenterLogoType.NONE || centerLogoBitmap != null) {
+                val canvas = android.graphics.Canvas(bitmap)
+                val logoAreaSize = (width * 0.23f).toInt()
+                val left = (width - logoAreaSize) / 2f
+                val top = (height - logoAreaSize) / 2f
+                val right = left + logoAreaSize
+                val bottom = top + logoAreaSize
+                val rectF = RectF(left, top, right, bottom)
+                val cornerRadius = logoAreaSize * 0.28f
+
+                // Draw crisp white background card in center
+                val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.WHITE
+                    style = Paint.Style.FILL
+                }
+                canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint)
+
+                // Draw subtle modern border around center logo badge
+                val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = android.graphics.Color.rgb(226, 232, 240)
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f
+                }
+                canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint)
+
+                // Draw the logo content inside
+                val innerPadding = logoAreaSize * 0.12f
+                val innerRectF = RectF(
+                    left + innerPadding,
+                    top + innerPadding,
+                    right - innerPadding,
+                    bottom - innerPadding
+                )
+
+                if (centerLogoBitmap != null) {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+                    val srcRect = Rect(0, 0, centerLogoBitmap.width, centerLogoBitmap.height)
+                    val dstRect = Rect(
+                        innerRectF.left.toInt(),
+                        innerRectF.top.toInt(),
+                        innerRectF.right.toInt(),
+                        innerRectF.bottom.toInt()
+                    )
+                    canvas.drawBitmap(centerLogoBitmap, srcRect, dstRect, paint)
+                }
+            }
+
             bitmap
         } catch (e: Exception) {
             e.printStackTrace()
@@ -1340,72 +1654,28 @@ fun shareQrCode(context: Context, bitmap: Bitmap) {
 }
 
 @Composable
-fun VideoBackground() {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { ctx ->
-            val textureView = TextureView(ctx)
-            textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                var mediaPlayer: MediaPlayer? = null
+fun AppBackground() {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.bg_custom),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
 
-                override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                    try {
-                        mediaPlayer = MediaPlayer.create(ctx, R.raw.bg_video)?.apply {
-                            setOnErrorListener { _, _, _ -> true }
-                            setSurface(Surface(surface))
-                            isLooping = true
-                            setVolume(0f, 0f)
-                            
-                            setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
-                                try {
-                                    val viewWidth = textureView.width.toFloat()
-                                    val viewHeight = textureView.height.toFloat()
-                                    if (viewWidth > 0 && viewHeight > 0 && videoWidth > 0 && videoHeight > 0) {
-                                        val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
-                                        val viewRatio = viewWidth / viewHeight
-                                        
-                                        val scaleX: Float
-                                        val scaleY: Float
-                                        if (videoRatio > viewRatio) {
-                                            scaleX = videoRatio / viewRatio
-                                            scaleY = 1f
-                                        } else {
-                                            scaleX = 1f
-                                            scaleY = viewRatio / videoRatio
-                                        }
-                                        
-                                        val matrix = Matrix()
-                                        matrix.setScale(
-                                            scaleX, scaleY,
-                                            viewWidth / 2f, viewHeight / 2f
-                                        )
-                                        textureView.setTransform(matrix)
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
-                            start()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
-                override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                    try {
-                        mediaPlayer?.release()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    mediaPlayer = null
-                    return true
-                }
-                override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
-            }
-            textureView
-        },
-        update = {}
-    )
+        // Dark glass vignette & tint overlay to ensure high readability, vibrant glow, and contrast
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x66000000),
+                            Color(0x8007080C),
+                            Color(0xB3000000)
+                        )
+                    )
+                )
+        )
+    }
 }
