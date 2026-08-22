@@ -48,8 +48,8 @@ jobs:
           mkdir -p release-apk
           APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -f "$APK_PATH" ]; then
-            cp "$APK_PATH" release-apk/QR-Pro-v1.1.2.apk
-            ls -lh release-apk/QR-Pro-v1.1.2.apk
+            cp "$APK_PATH" release-apk/QR-Pro-v1.1.3.apk
+            ls -lh release-apk/QR-Pro-v1.1.3.apk
           else
             echo "Error: No APK file found in app/build/outputs/apk!"
             exit 1
@@ -58,22 +58,22 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-v1.1.2
+          name: app-debug-v1.1.3
           path: release-apk/*.apk
 
-      - name: Automatically Create or Update Release v1.1.2
+      - name: Automatically Create or Update Release v1.1.3
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.2
-          name: "QR Pro - Version 1.1.2"
+          tag_name: v1.1.3
+          name: "QR Pro - Version 1.1.3"
           body: |
-            ## 📱 QR Pro - Release v1.1.2
+            ## 📱 QR Pro - Release v1.1.3
             
             ### ✨ تحديثات واستقرار هذا الإصدار:
-            - **إصلاح جذري للأيقونة وشاشة البداية (Splash Screen):** ضبط الـ Adaptive Icons ومراجع الـ Drawables بالكامل لتعمل بدقة فائقة وبدون أي كراش عند الفتح.
-            - **إصلاح ملف الـ Workflow للبناء الآلي:** معالجة مفاتيح التوقيع واستخراج حزمة الـ APK بشكل سليم 100% ومتوافق مع جميع الهواتف.
-            - **التثبيت والتحديث المباشر:** إمكانية تنزيل وتثبيت التحديثات مباشرة من داخل التطبيق دون فتح المتصفح.
-            - **الترقية للإصدار 1.1.2 (versionCode 4).**
+            - **إصلاح جذري شامل للأيقونة وشاشة البداية (Splash Screen):** ضبط الـ Vector Foreground والـ Mipmaps المحدثة بدقة هندسية قياسية لمنع أي مشكلة في الفتح.
+            - **استقرار فائق ومباشر:** حل كامل لمشكلة الإغلاق المفاجئ وتحديث مسارات الـ APK في الـ Workflow.
+            - **التثبيت والتحديث التلقائي:** إمكانية تنزيل وتثبيت التحديثات مباشرة من داخل التطبيق دون فتح المتصفح.
+            - **الترقية للإصدار 1.1.3 (versionCode 5).**
             
             📥 **حمل ملف الـ APK المرفق أدناه وثبته على هاتفك مباشرة!**
           files: release-apk/*.apk

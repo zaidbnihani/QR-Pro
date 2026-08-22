@@ -6,9 +6,11 @@ import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Path
 
 interface GitHubService {
+    @Headers("User-Agent: QR-Pro-Android-App")
     @GET("repos/{owner}/{repo}/releases/latest")
     suspend fun getLatestRelease(
         @Path("owner") owner: String,
