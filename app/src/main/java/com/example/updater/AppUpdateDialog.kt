@@ -33,8 +33,12 @@ fun AutoUpdateChecker(currentVersionName: String) {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        val result = UpdateChecker.checkForUpdates(currentVersionName)
-        updateInfo = result
+        try {
+            val result = UpdateChecker.checkForUpdates(currentVersionName)
+            updateInfo = result
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
     }
 
     updateInfo?.let { info ->
