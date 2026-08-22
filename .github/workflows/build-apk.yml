@@ -34,38 +34,46 @@ jobs:
         run: |
           touch .env
           if [ -f "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
-          elif [ ! -f "debug.keystore" ]; then
+            tr -d '\r\n' < debug.keystore.base64 | base64 -d > debug.keystore
+          fi
+          if [ ! -s "debug.keystore" ]; then
             keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
           fi
 
       - name: Build Debug APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
 
-      - name: Rename APK for Release
+      - name: Prepare APK for Release
         run: |
           mkdir -p release-apk
-          cp app/build/outputs/apk/debug/*.apk release-apk/QR-Pro-v1.1.1.apk
+          APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -f "$APK_PATH" ]; then
+            cp "$APK_PATH" release-apk/QR-Pro-v1.1.2.apk
+            ls -lh release-apk/QR-Pro-v1.1.2.apk
+          else
+            echo "Error: No APK file found in app/build/outputs/apk!"
+            exit 1
+          fi
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-v1.1.1
+          name: app-debug-v1.1.2
           path: release-apk/*.apk
 
-      - name: Automatically Create or Update Release v1.1.1
+      - name: Automatically Create or Update Release v1.1.2
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.1
-          name: "QR Pro - Version 1.1.1"
+          tag_name: v1.1.2
+          name: "QR Pro - Version 1.1.2"
           body: |
-            ## 📱 QR Pro - Release v1.1.1
+            ## 📱 QR Pro - Release v1.1.2
             
-            ### ✨ ما تم إنجازه في هذا الإصدار:
-            - **إصلاح كامل للأيقونة وتشغيل التطبيق:** دعم فوري ومضمون لجميع شاشات ومطلقات أندرويد (Adaptive Icons & Legacy Mipmaps).
-            - **نظام التحديث التلقائي المباشر:** تنزيل وتثبيت التحديثات بضغطة زر من داخل التطبيق دون فتح المتصفح.
-            - **استقرار الإقلاع السريع:** حل مشكلة الإغلاق المفاجئ عند فتح التطبيق.
-            - **الترقية للإصدار 1.1.1 (versionCode 3).**
+            ### ✨ تحديثات واستقرار هذا الإصدار:
+            - **إصلاح جذري للأيقونة وشاشة البداية (Splash Screen):** ضبط الـ Adaptive Icons ومراجع الـ Drawables بالكامل لتعمل بدقة فائقة وبدون أي كراش عند الفتح.
+            - **إصلاح ملف الـ Workflow للبناء الآلي:** معالجة مفاتيح التوقيع واستخراج حزمة الـ APK بشكل سليم 100% ومتوافق مع جميع الهواتف.
+            - **التثبيت والتحديث المباشر:** إمكانية تنزيل وتثبيت التحديثات مباشرة من داخل التطبيق دون فتح المتصفح.
+            - **الترقية للإصدار 1.1.2 (versionCode 4).**
             
             📥 **حمل ملف الـ APK المرفق أدناه وثبته على هاتفك مباشرة!**
           files: release-apk/*.apk
