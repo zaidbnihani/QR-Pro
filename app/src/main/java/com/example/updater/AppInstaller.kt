@@ -1,10 +1,12 @@
 package com.example.updater
 
 import android.app.DownloadManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -13,6 +15,9 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.*
 import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.OutputStream
 
 object AppInstaller {
 
@@ -41,15 +46,93 @@ object AppInstaller {
     }
 
     /**
-     * تشغيل شاشة تثبيت الـ APK عبر FileProvider
+     * دالة التثبيت الرئيسية:
+     * - تحاول التثبيت في الخلفية (Silent Update) بدون تدخل المستخدم على Android 12 (API 31)+
+     * - ترجع تلقائياً للأسلوب التقليدي (Fallback via FileProvider) على الإصدارات الأقدم أو عند الحاجة
      */
     fun installApk(context: Context, apkFile: File) {
-        try {
-            if (!apkFile.exists()) {
-                Toast.makeText(context, "ملف التحديث غير موجود", Toast.LENGTH_SHORT).show()
+        if (!apkFile.exists() || apkFile.length() == 0L) {
+            Toast.makeText(context, "ملف التحديث غير موجود أو غير صالح", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 1. إذا كان الجهاز يعمل على Android 12 (API 31) فما فوق، نستخدم PackageInstaller مع USER_ACTION_NOT_REQUIRED
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val success = installPackageViaSession(context, apkFile)
+            if (success) {
+                Toast.makeText(context, "جاري تثبيت التحديث في الخلفية...", Toast.LENGTH_SHORT).show()
                 return
             }
+        }
 
+        // 2. الرجوع التلقائي (Fallback) للأسلوب التقليدي عبر FileProvider للإصدارات الأقدم من Android 12
+        installLegacyViaFileProvider(context, apkFile)
+    }
+
+    /**
+     * تثبيت التحديث عبر PackageInstaller.Session مع USER_ACTION_NOT_REQUIRED (Android 12+)
+     */
+    private fun installPackageViaSession(context: Context, apkFile: File): Boolean {
+        var session: PackageInstaller.Session? = null
+        return try {
+            val packageInstaller = context.packageManager.packageInstaller
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(context.packageName)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    setPackageSource(PackageInstaller.PACKAGE_SOURCE_OTHER)
+                }
+            }
+
+            val sessionId = packageInstaller.createSession(params)
+            session = packageInstaller.openSession(sessionId)
+
+            val inputStream: InputStream = FileInputStream(apkFile)
+            val outputStream: OutputStream = session.openWrite("package_session", 0, apkFile.length())
+
+            inputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                    session.fsync(output)
+                }
+            }
+
+            // إعداد Intent للـ BroadcastReceiver لاستقبال النتيجة
+            val receiverIntent = Intent(context, InstallStatusReceiver::class.java).apply {
+                action = InstallStatusReceiver.ACTION_INSTALL_STATUS
+            }
+
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                sessionId,
+                receiverIntent,
+                flags
+            )
+
+            session.commit(pendingIntent.intentSender)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            session?.abandon()
+            false
+        } finally {
+            session?.close()
+        }
+    }
+
+    /**
+     * الأسلوب التقليدي للتثبيت عبر FileProvider (Android 11 فما دون)
+     */
+    private fun installLegacyViaFileProvider(context: Context, apkFile: File) {
+        try {
             val authority = "${context.packageName}.fileprovider"
             val contentUri: Uri = FileProvider.getUriForFile(context, authority, apkFile)
 
@@ -90,7 +173,7 @@ object AppInstaller {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setTitle("تحديث QR Pro $version")
-            setDescription("جاري تنزيل ملف التحديث...")
+            setDescription("جاري تنزيل وتثبيت التحديث...")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setDestinationUri(Uri.fromFile(apkFile))
             setMimeType("application/vnd.android.package-archive")

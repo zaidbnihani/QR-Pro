@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -132,6 +135,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Enable Fullscreen Immersive Mode
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
 
         setContent {
             MyApplicationTheme {
@@ -608,103 +616,113 @@ fun QrProApp(modifier: Modifier = Modifier) {
                             OutlinedTextField(
                                 value = textInput,
                                 onValueChange = { textInput = it },
-                                label = { Text("أدخل رابط الموقع الإلكتروني", color = Color(0xFF718096)) },
+                                label = { Text("أدخل رابط الموقع الإلكتروني", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("input_link")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Ltr
                                 ),
-                                placeholder = { Text("example.com", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("https://example.com", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                         }
                         QrType.TEXT -> {
                             OutlinedTextField(
                                 value = textInput,
                                 onValueChange = { textInput = it },
-                                label = { Text("أدخل النص المراد ترميزه", color = Color(0xFF718096)) },
+                                label = { Text("أدخل النص المراد ترميزه", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(120.dp)
+                                    .height(130.dp)
                                     .testTag("input_text")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.ContentOrLtr
                                 ),
-                                placeholder = { Text("اكتب أي معلومات هنا وسيحولها التطبيق لرمز QR...", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("اكتب أي معلومات هنا وسيحولها التطبيق لرمز QR...", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                         }
                         QrType.WHATSAPP -> {
                             OutlinedTextField(
                                 value = whatsappPhone,
                                 onValueChange = { whatsappPhone = it },
-                                label = { Text("رقم الهاتف (من دون + أو أصفار دولية)", color = Color(0xFF718096)) },
+                                label = { Text("رقم الهاتف (مع رمز الدولة بدون +)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
                                     .testTag("input_whatsapp_phone")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Ltr
                                 ),
-                                placeholder = { Text("966500000000", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("966500000000", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                             OutlinedTextField(
                                 value = whatsappMessage,
                                 onValueChange = { whatsappMessage = it },
-                                label = { Text("الرسالة التلقائية الاختيارية", color = Color(0xFF718096)) },
+                                label = { Text("الرسالة التلقائية (اختياري)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("input_whatsapp_msg")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Content
                                 ),
-                                placeholder = { Text("أهلاً بك! أريد التواصل معك بخصوص...", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("أهلاً بك! أريد التواصل معك بخصوص...", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                         }
                         QrType.WIFI -> {
                             OutlinedTextField(
                                 value = wifiSsid,
                                 onValueChange = { wifiSsid = it },
-                                label = { Text("اسم الشبكة (SSID)", color = Color(0xFF718096)) },
+                                label = { Text("اسم شبكة الواي فاي (SSID)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
                                     .testTag("input_wifi_ssid")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.ContentOrLtr
                                 ),
-                                placeholder = { Text("My Home Wi-Fi", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("My Home Wi-Fi", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                             // Security Type selector (WPA/WEP/Open)
                             Text(
-                                text = "نوع الحماية",
+                                text = "نوع الحماية والتشفير:",
                                 color = Color.White,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 6.dp)
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Row(
                                 modifier = Modifier
@@ -721,19 +739,19 @@ fun QrProApp(modifier: Modifier = Modifier) {
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .glassMorphism(cornerRadius = 16.dp, baseAlpha = if (isSecSelected) 0.35f else 0.15f)
+                                            .glassMorphism(cornerRadius = 16.dp, baseAlpha = if (isSecSelected) 0.4f else 0.2f)
                                             .clickable { wifiSec = sec }
-                                            .padding(vertical = 8.dp),
+                                            .padding(vertical = 10.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = when (sec) {
                                                 "WPA" -> "WPA/WPA2"
                                                 "WEP" -> "WEP"
-                                                else -> "بدون حماية"
+                                                else -> "بدون كلمة سر"
                                             },
-                                            color = if (isSecSelected) Color.White else Color(0xFFA0AEC0),
-                                            fontSize = 11.sp,
+                                            color = if (isSecSelected) Color(0xFF00E5FF) else Color(0xFFE2E8F0),
+                                            fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -748,47 +766,60 @@ fun QrProApp(modifier: Modifier = Modifier) {
                                 OutlinedTextField(
                                     value = wifiPassword,
                                     onValueChange = { wifiPassword = it },
-                                    label = { Text("كلمة مرور الشبكة", color = Color(0xFF718096)) },
+                                    label = { Text("كلمة مرور الشبكة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 12.dp)
                                         .testTag("input_wifi_pwd")
-                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                     colors = customTextFieldColors(),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true,
                                     textStyle = LocalTextStyle.current.copy(
                                         color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
                                         textDirection = TextDirection.Ltr
                                     ),
-                                    placeholder = { Text("••••••••", color = Color(0xFF4A5568)) }
+                                    placeholder = { Text("••••••••", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                                 )
                             }
                         }
                         QrType.LOCATION -> {
+                            // Section header for clarity
+                            Text(
+                                text = "بيانات الموقع الجغرافي الخريطة",
+                                color = Color(0xFF00E5FF),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
                             OutlinedTextField(
                                 value = locationName,
                                 onValueChange = { locationName = it },
-                                label = { Text("اسم المكان أو العنوان أو رابط خريطة", color = Color(0xFF718096)) },
+                                label = { Text("اسم المكان أو رابط Google Maps", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
                                     .testTag("input_location_name")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Content
                                 ),
-                                placeholder = { Text("مثال: الرياض، برج خليفة، أو رابط Google Maps", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("مثال: الرياض، برج خليفة، أو رابط الخريطة", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
 
                             Text(
-                                text = "أو أدخل الإحداثيات الجغرافية بدقة (اختياري):",
-                                color = Color(0xFFA0AEC0),
-                                fontSize = 12.sp,
+                                text = "أو أدخل الإحداثيات الجغرافية المباشرة (اختياري):",
+                                color = Color(0xFFE2E8F0),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
 
@@ -801,113 +832,136 @@ fun QrProApp(modifier: Modifier = Modifier) {
                                 OutlinedTextField(
                                     value = locationLongitude,
                                     onValueChange = { locationLongitude = it },
-                                    label = { Text("خط الطول (Lng)", color = Color(0xFF718096), fontSize = 11.sp) },
+                                    label = { Text("خط الطول (Lng)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp) },
                                     modifier = Modifier
                                         .weight(1f)
                                         .testTag("input_location_lng")
-                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                     colors = customTextFieldColors(),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     textStyle = LocalTextStyle.current.copy(
                                         color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
                                         textDirection = TextDirection.Ltr
                                     ),
-                                    placeholder = { Text("46.6753", color = Color(0xFF4A5568)) }
+                                    placeholder = { Text("46.6753", color = Color(0xFF94A3B8), fontSize = 13.sp) }
                                 )
 
                                 OutlinedTextField(
                                     value = locationLatitude,
                                     onValueChange = { locationLatitude = it },
-                                    label = { Text("خط العرض (Lat)", color = Color(0xFF718096), fontSize = 11.sp) },
+                                    label = { Text("خط العرض (Lat)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp) },
                                     modifier = Modifier
                                         .weight(1f)
                                         .testTag("input_location_lat")
-                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                        .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                     colors = customTextFieldColors(),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     textStyle = LocalTextStyle.current.copy(
                                         color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
                                         textDirection = TextDirection.Ltr
                                     ),
-                                    placeholder = { Text("24.7136", color = Color(0xFF4A5568)) }
+                                    placeholder = { Text("24.7136", color = Color(0xFF94A3B8), fontSize = 13.sp) }
                                 )
                             }
                         }
                         QrType.EMAIL -> {
+                            // Clear separated email header
+                            Text(
+                                text = "بيانات البريد الإلكتروني المباشر",
+                                color = Color(0xFF00E5FF),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
                             OutlinedTextField(
                                 value = emailAddress,
                                 onValueChange = { emailAddress = it },
-                                label = { Text("عنوان البريد الإلكتروني المستلم", color = Color(0xFF718096)) },
+                                label = { Text("عنوان البريد الإلكتروني المستلم", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
                                     .testTag("input_email_addr")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Ltr
                                 ),
-                                placeholder = { Text("example@gmail.com", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("example@gmail.com", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                             OutlinedTextField(
                                 value = emailSubject,
                                 onValueChange = { emailSubject = it },
-                                label = { Text("عنوان الرسالة", color = Color(0xFF718096)) },
+                                label = { Text("عنوان الرسالة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 12.dp)
                                     .testTag("input_email_sub")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Content
-                                )
+                                ),
+                                placeholder = { Text("موضوع الإيميل", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                             OutlinedTextField(
                                 value = emailBody,
                                 onValueChange = { emailBody = it },
-                                label = { Text("محتوى الرسالة", color = Color(0xFF718096)) },
+                                label = { Text("محتوى أو نص الرسالة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .height(100.dp)
                                     .testTag("input_email_body")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
                                     textDirection = TextDirection.Content
-                                )
+                                ),
+                                placeholder = { Text("اكتب تفاصيل الرسالة هنا...", color = Color(0xFF94A3B8), fontSize = 14.sp) }
                             )
                         }
                         QrType.PHONE -> {
                             OutlinedTextField(
                                 value = phoneInput,
                                 onValueChange = { phoneInput = it },
-                                label = { Text("أدخل رقم الهاتف للاتصال المباشر", color = Color(0xFF718096)) },
+                                label = { Text("أدخل رقم الهاتف للاتصال المباشر", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("input_phone")
-                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.15f),
+                                    .glassMorphism(cornerRadius = 16.dp, baseAlpha = 0.25f),
                                 colors = customTextFieldColors(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 textStyle = LocalTextStyle.current.copy(
                                     color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
                                     textDirection = TextDirection.Ltr
                                 ),
-                                placeholder = { Text("+966500000000", color = Color(0xFF4A5568)) }
+                                placeholder = { Text("+966500000000", color = Color(0xFF94A3B8), fontSize = 15.sp) }
                             )
                         }
                     }
@@ -1241,15 +1295,17 @@ fun borderStrokeColors(color: Color): androidx.compose.foundation.BorderStroke {
 
 @Composable
 fun customTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color.Transparent,
-    unfocusedBorderColor = Color.Transparent,
+    focusedBorderColor = Color(0xFF00E5FF).copy(alpha = 0.8f),
+    unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
     focusedLabelColor = Color(0xFF00E5FF),
     unfocusedLabelColor = Color(0xFFE2E8F0),
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     cursorColor = Color(0xFF00E5FF),
-    focusedContainerColor = Color.Transparent,
-    unfocusedContainerColor = Color.Transparent
+    focusedPlaceholderColor = Color(0xFFCBD5E0),
+    unfocusedPlaceholderColor = Color(0xFFCBD5E0),
+    focusedContainerColor = Color.Black.copy(alpha = 0.35f),
+    unfocusedContainerColor = Color.Black.copy(alpha = 0.25f)
 )
 
 fun Modifier.glassMorphism(
