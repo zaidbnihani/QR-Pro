@@ -45,27 +45,27 @@ jobs:
       - name: Rename APK for Release
         run: |
           mkdir -p release-apk
-          cp app/build/outputs/apk/debug/*.apk release-apk/QR-Pro-v1.1.0.apk
+          cp app/build/outputs/apk/debug/*.apk release-apk/QR-Pro-v1.1.1.apk
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-v1.1.0
+          name: app-debug-v1.1.1
           path: release-apk/*.apk
 
-      - name: Automatically Create or Update Release v1.1.0
+      - name: Automatically Create or Update Release v1.1.1
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: "QR Pro - Version 1.1.0"
+          tag_name: v1.1.1
+          name: "QR Pro - Version 1.1.1"
           body: |
-            ## 📱 QR Pro - Release v1.1.0
+            ## 📱 QR Pro - Release v1.1.1
             
             ### ✨ ما تم إنجازه في هذا الإصدار:
-            - **إصلاح كامل لتوافق الثيم وشاشات الإقلاع:** تشغيل مستقر 100% بدون أي إغلاق مفاجئ.
-            - **تثبيت وبناء الأيقونة الرسمية:** أيقونة واضحة بدقة كاملة لكافة شاشات ومطلقات أندرويد القديمة والحديثة.
-            - **توحيد التوقيع الرقمي:** إمكانية التحديث السلس والمباشر فوق الإصدارات السابقة بدون الحاجة لحذف التطبيق.
-            - **الترقية للإصدار 1.1.0 (versionCode 2):** توافق كامل مع معايير Google Play وتحديثات النظام.
+            - **إصلاح كامل للأيقونة وتشغيل التطبيق:** دعم فوري ومضمون لجميع شاشات ومطلقات أندرويد (Adaptive Icons & Legacy Mipmaps).
+            - **نظام التحديث التلقائي المباشر:** تنزيل وتثبيت التحديثات بضغطة زر من داخل التطبيق دون فتح المتصفح.
+            - **استقرار الإقلاع السريع:** حل مشكلة الإغلاق المفاجئ عند فتح التطبيق.
+            - **الترقية للإصدار 1.1.1 (versionCode 3).**
             
             📥 **حمل ملف الـ APK المرفق أدناه وثبته على هاتفك مباشرة!**
           files: release-apk/*.apk
