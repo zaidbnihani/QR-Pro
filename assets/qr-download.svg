@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <rect width="300" height="300" rx="18" fill="#ffffff"/>
+  <g fill="#111111">
+    <rect x="25" y="25" width="60" height="60"/>
+    <rect x="215" y="25" width="60" height="60"/>
+    <rect x="25" y="215" width="60" height="60"/>
+    <rect x="37" y="37" width="36" height="36" fill="#ffffff"/>
+    <rect x="227" y="37" width="36" height="36" fill="#ffffff"/>
+    <rect x="37" y="227" width="36" height="36" fill="#ffffff"/>
+    <rect x="47" y="47" width="16" height="16"/>
+    <rect x="237" y="47" width="16" height="16"/>
+    <rect x="47" y="237" width="16" height="16"/>
+    <rect x="100" y="25" width="12" height="12"/><rect x="124" y="25" width="12" height="12"/><rect x="148" y="25" width="12" height="12"/><rect x="172" y="35" width="12" height="12"/>
+    <rect x="112" y="37" width="12" height="12"/><rect x="136" y="37" width="12" height="12"/><rect x="184" y="47" width="12" height="12"/>
+    <rect x="100" y="49" width="12" height="12"/><rect x="148" y="49" width="12" height="12"/><rect x="196" y="57" width="12" height="12"/>
+    <rect x="112" y="61" width="12" height="12"/><rect x="160" y="61" width="12" height="12"/><rect x="136" y="73" width="12" height="12"/>
+    <rect x="100" y="85" width="12" height="12"/><rect x="124" y="97" width="12" height="12"/><rect x="172" y="85" width="12" height="12"/><rect x="196" y="81" width="12" height="12"/>
+    <rect x="25" y="100" width="12" height="12"/><rect x="49" y="100" width="12" height="12"/><rect x="73" y="112" width="12" height="12"/><rect x="97" y="109" width="12" height="12"/>
+    <rect x="37" y="124" width="12" height="12"/><rect x="61" y="124" width="12" height="12"/><rect x="121" y="121" width="12" height="12"/><rect x="145" y="133" width="12" height="12"/>
+    <rect x="169" y="121" width="12" height="12"/><rect x="217" y="121" width="12" height="12"/><rect x="241" y="133" width="12" height="12"/><rect x="263" y="127" width="12" height="12"/>
+    <rect x="25" y="148" width="12" height="12"/><rect x="85" y="145" width="12" height="12"/><rect x="109" y="157" width="12" height="12"/><rect x="193" y="145" width="12" height="12"/>
+    <rect x="49" y="169" width="12" height="12"/><rect x="133" y="169" width="12" height="12"/><rect x="229" y="157" width="12" height="12"/><rect x="263" y="163" width="12" height="12"/>
+    <rect x="73" y="181" width="12" height="12"/><rect x="157" y="181" width="12" height="12"/><rect x="205" y="181" width="12" height="12"/><rect x="241" y="193" width="12" height="12"/>
+    <rect x="100" y="215" width="12" height="12"/><rect x="124" y="227" width="12" height="12"/><rect x="148" y="215" width="12" height="12"/><rect x="196" y="227" width="12" height="12"/>
+    <rect x="112" y="239" width="12" height="12"/><rect x="160" y="239" width="12" height="12"/><rect x="208" y="239" width="12" height="12"/><rect x="256" y="227" width="12" height="12"/>
+    <rect x="100" y="251" width="12" height="12"/><rect x="148" y="251" width="12" height="12"/><rect x="220" y="251" width="12" height="12"/><rect x="244" y="263" width="12" height="12"/>
+    <rect x="124" y="263" width="12" height="12"/><rect x="172" y="263" width="12" height="12"/><rect x="232" y="275" width="12" height="12"/><rect x="268" y="263" width="12" height="12"/>
+    <!-- أيقونة تحميل في المركز -->
+  </g>
+  <rect x="126" y="126" width="48" height="48" rx="13" fill="#0a0a0c"/>
+  <path d="M150 134v18m0 0-7-7m7 7 7-7M136 156v6a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-6" stroke="#30d158" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
